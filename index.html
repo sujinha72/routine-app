@@ -1,12 +1,482 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>할일 체크리스트</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>몸과 창작 공부 · 루틴 체크</title>
+
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    :root{
+      --bg:#f7f7f8; --card:#ffffff; --line:#e6e6e8;
+      --text:#111; --muted:#6b7280; --accent:#2563eb;
+      --pad:16px; --r:14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      background:rgba(255,255,255,.9); backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--line);
+    }
+    .wrap{max-width:920px; margin:0 auto; padding: 14px var(--pad);}
+    h1{margin:0; font-size:20px;}
+    .sub{margin-top:4px; color:var(--muted); font-size:13px;}
+    main{max-width:920px; margin:0 auto; padding: var(--pad); display:grid; gap:12px;}
+    .grid{display:grid; grid-template-columns: 1fr; gap:12px;}
+    @media (min-width:860px){ .grid{grid-template-columns: 1.2fr .8fr;} }
+
+    .card{
+      background:var(--card); border:1px solid var(--line);
+      border-radius:var(--r); padding:14px;
+      box-shadow: 0 1px 0 rgba(0,0,0,.03);
+    }
+    .card h2{margin:0 0 10px 0; font-size:16px;}
+    .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+    input, select, button{
+      font: inherit;
+    }
+    input, select{
+      padding:10px 10px; border:1px solid var(--line);
+      border-radius:10px; background:#fff;
+    }
+    button{
+      padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+      background:#fff; cursor:pointer;
+    }
+    button.primary{background:var(--accent); color:#fff; border-color:transparent;}
+    button:disabled{opacity:.5; cursor:not-allowed;}
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border:1px solid var(--line);
+      border-radius:999px; color:var(--muted); font-size:12px;
+    }
+    .list{margin:0; padding:0; list-style:none; display:grid; gap:10px;}
+    .item{
+      display:grid; gap:10px;
+      border:1px solid var(--line);
+      border-radius:12px; padding:12px;
+      background:#fff;
+    }
+    .itemTop{display:flex; justify-content:space-between; gap:10px; align-items:flex-start;}
+    .name{font-weight:700; font-size:15px;}
+    .meta{color:var(--muted); font-size:12px; margin-top:2px;}
+    .btns{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+    .kpi{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+    .kpi .box{
+      border:1px solid var(--line); border-radius:12px; padding:10px; background:#fff;
+    }
+    .kpi .big{font-size:18px; font-weight:800;}
+    .kpi .lab{color:var(--muted); font-size:12px;}
+    .warn{color:#b45309;}
+    .ok{color:#16a34a;}
+    footer{max-width:920px; margin:0 auto; padding:0 var(--pad) 30px; color:var(--muted); font-size:12px;}
+    .small{font-size:12px; color:var(--muted);}
+    .sep{height:1px; background:var(--line); margin:12px 0;}
+  </style>
 </head>
+
 <body>
-<h1>할일 체크리스트 앱 테스트</h1>
-<p>앱이 성공적으로 실행되었습니다 🎉</p>
+<header>
+  <div class="wrap">
+    <h1>몸과 창작 공부 · 루틴 체크</h1>
+    <div class="sub">하루 루틴을 기록하고, 30일 / 6개월 누적으로 성취감을 확인해요.</div>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2>오늘 루틴</h2>
+
+      <div class="row" style="justify-content:space-between;">
+        <div class="row">
+          <span class="pill" id="todayLabel">오늘</span>
+          <span class="pill">데이터는 이 브라우저에 저장(로컬)</span>
+        </div>
+        <div class="row">
+          <button id="resetTodayBtn" title="오늘 카운트만 0으로">오늘만 초기화</button>
+          <button id="exportBtn">내보내기</button>
+          <button id="importBtn">가져오기</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <ul class="list" id="habitList"></ul>
+
+      <div class="sep"></div>
+
+      <div class="row">
+        <input id="newName" placeholder="새 할 일/습관 이름" style="flex:1; min-width:220px;">
+        <select id="newType">
+          <option value="count">하루 여러 번 (+1 누적)</option>
+          <option value="binary">하루 1회 (완료/미완료)</option>
+        </select>
+        <input id="newTarget" type="number" min="1" value="1" style="width:110px;" title="하루 목표 횟수(누적형에만 사용)">
+        <button class="primary" id="addBtn">추가</button>
+      </div>
+      <div class="small">※ “하루 목표”는 누적형(물마시기/스트레칭 등)에만 적용돼요.</div>
+    </section>
+
+    <aside class="card">
+      <h2>요약</h2>
+
+      <div class="kpi">
+        <div class="box">
+          <div class="big" id="kpiDone">0</div>
+          <div class="lab">오늘 목표 달성(개)</div>
+        </div>
+        <div class="box">
+          <div class="big" id="kpiTotal">0</div>
+          <div class="lab">전체 루틴(개)</div>
+        </div>
+        <div class="box">
+          <div class="big" id="kpiPct">0%</div>
+          <div class="lab">달성률</div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row" style="justify-content:space-between; align-items:flex-end;">
+        <div>
+          <div class="name">기간 선택</div>
+          <div class="meta">30일 / 6개월 누적 보기</div>
+        </div>
+        <select id="rangeSel">
+          <option value="30">최근 30일</option>
+          <option value="180">최근 6개월(180일)</option>
+        </select>
+      </div>
+
+      <div class="sep"></div>
+
+      <div id="rangeStats"></div>
+
+      <div class="sep"></div>
+
+      <div class="small warn">
+        💡 팁: “완료/미완료” 루틴은 하루에 완료하면 그날 1회로 기록돼요.
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer>
+  이 앱은 개인 루틴 기록용입니다. (GitHub Pages + 브라우저 로컬 저장소)
+</footer>
+
+<script>
+  // ---- Service worker 등록 (PWA)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+  }
+
+  // ---- 기본 루틴(사용자 요청 목록)
+  const DEFAULT_HABITS = [
+    { id: "run4k", name: "달리기 4km (이틀에 1번)", type: "binary", dailyTarget: 1 },
+    { id: "bm", name: "배변 1회", type: "binary", dailyTarget: 1 },
+    { id: "guitar", name: "기타연습 20분", type: "binary", dailyTarget: 1 },
+    { id: "read", name: "책읽고 요약(독서)", type: "binary", dailyTarget: 1 },
+    { id: "urbansketch", name: "어반스케치 (주 1회)", type: "binary", dailyTarget: 1 },
+    { id: "water", name: "물마시기", type: "count", dailyTarget: 6 },
+    { id: "break50", name: "50분마다 걷기/스트레칭 + 멀리보기", type: "count", dailyTarget: 6 },
+    { id: "writing", name: "글쓰기 (2주 1회)", type: "binary", dailyTarget: 1 },
+  ];
+
+  const LS_KEY = "routineApp.v1";
+
+  const $ = (id) => document.getElementById(id);
+  const todayISO = () => new Date().toISOString().slice(0,10);
+
+  function loadState(){
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) {
+      return {
+        habits: DEFAULT_HABITS,
+        log: {} // { "YYYY-MM-DD": { habitId: {count, done} } }
+      };
+    }
+    try { return JSON.parse(raw); } catch(e){
+      return { habits: DEFAULT_HABITS, log: {} };
+    }
+  }
+  function saveState(s){ localStorage.setItem(LS_KEY, JSON.stringify(s)); }
+
+  function ensureToday(s){
+    const d = todayISO();
+    s.log[d] ||= {};
+    for (const h of s.habits){
+      s.log[d][h.id] ||= (h.type === "count" ? {count:0} : {done:false});
+    }
+  }
+
+  function setTodayLabel(){
+    const d = new Date();
+    const txt = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} (오늘)`;
+    $("todayLabel").textContent = txt;
+  }
+
+  function calcTodayProgress(s){
+    const d = todayISO();
+    const day = s.log[d] || {};
+    let done = 0;
+    for (const h of s.habits){
+      const entry = day[h.id];
+      if (!entry) continue;
+      if (h.type === "count"){
+        if ((entry.count||0) >= (h.dailyTarget||1)) done++;
+      } else {
+        if (entry.done) done++;
+      }
+    }
+    const total = s.habits.length;
+    return {done, total, pct: total ? Math.round(done/total*100) : 0};
+  }
+
+  function render(s){
+    ensureToday(s);
+    setTodayLabel();
+
+    const d = todayISO();
+    const day = s.log[d];
+
+    const ul = $("habitList");
+    ul.innerHTML = "";
+
+    for (const h of s.habits){
+      const li = document.createElement("li");
+      li.className = "item";
+
+      const top = document.createElement("div");
+      top.className = "itemTop";
+
+      const left = document.createElement("div");
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = h.name;
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const entry = day[h.id];
+
+      if (h.type === "count"){
+        const cur = entry.count || 0;
+        const tgt = h.dailyTarget || 1;
+        meta.innerHTML = `오늘: <b>${cur}</b> / ${tgt}  ${cur>=tgt ? '<span class="ok">✓ 달성</span>' : ''}`;
+      } else {
+        meta.innerHTML = `오늘: ${entry.done ? '<span class="ok"><b>완료</b> ✓</span>' : '<span class="warn">미완료</span>'}`;
+      }
+
+      left.appendChild(name);
+      left.appendChild(meta);
+
+      const right = document.createElement("div");
+      right.className = "btns";
+
+      if (h.type === "count"){
+        const plus = document.createElement("button");
+        plus.textContent = "+1";
+        plus.onclick = () => { entry.count = (entry.count||0) + 1; saveState(s); render(s); };
+
+        const minus = document.createElement("button");
+        minus.textContent = "-1";
+        minus.onclick = () => { entry.count = Math.max(0, (entry.count||0) - 1); saveState(s); render(s); };
+
+        const zero = document.createElement("button");
+        zero.textContent = "0";
+        zero.onclick = () => { entry.count = 0; saveState(s); render(s); };
+
+        right.appendChild(plus);
+        right.appendChild(minus);
+        right.appendChild(zero);
+      } else {
+        const toggle = document.createElement("button");
+        toggle.className = "primary";
+        toggle.textContent = entry.done ? "취소" : "완료";
+        toggle.onclick = () => { entry.done = !entry.done; saveState(s); render(s); };
+        right.appendChild(toggle);
+      }
+
+      const del = document.createElement("button");
+      del.textContent = "삭제";
+      del.onclick = () => {
+        if (!confirm(`"${h.name}" 을(를) 삭제할까요?`)) return;
+        // habits에서 제거
+        s.habits = s.habits.filter(x => x.id !== h.id);
+        // 로그에서도 제거
+        for (const dayKey of Object.keys(s.log)){
+          if (s.log[dayKey] && s.log[dayKey][h.id]) delete s.log[dayKey][h.id];
+        }
+        saveState(s); render(s);
+      };
+      right.appendChild(del);
+
+      top.appendChild(left);
+      top.appendChild(right);
+
+      li.appendChild(top);
+      ul.appendChild(li);
+    }
+
+    const t = calcTodayProgress(s);
+    $("kpiDone").textContent = t.done;
+    $("kpiTotal").textContent = t.total;
+    $("kpiPct").textContent = `${t.pct}%`;
+
+    renderRangeStats(s);
+  }
+
+  function renderRangeStats(s){
+    const days = Number($("rangeSel").value);
+    const end = new Date(todayISO());
+    const start = new Date(end);
+    start.setDate(start.getDate() - (days-1));
+
+    // per habit: totalCount, successDays
+    const stat = {};
+    for (const h of s.habits){
+      stat[h.id] = { name: h.name, type: h.type, total: 0, successDays: 0, days: 0 };
+    }
+
+    for (let i=0;i<days;i++){
+      const cur = new Date(start);
+      cur.setDate(start.getDate()+i);
+      const key = cur.toISOString().slice(0,10);
+      const day = s.log[key];
+      if (!day) continue;
+
+      for (const h of s.habits){
+        const e = day[h.id];
+        if (!e) continue;
+        stat[h.id].days += 1;
+
+        if (h.type === "count"){
+          const c = e.count || 0;
+          stat[h.id].total += c;
+          if (c >= (h.dailyTarget||1)) stat[h.id].successDays += 1;
+        } else {
+          if (e.done) stat[h.id].successDays += 1;
+        }
+      }
+    }
+
+    // 화면
+    const box = $("rangeStats");
+    box.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.className = "small";
+    head.textContent = `선택 기간: 최근 ${days}일 (기록이 있는 날 기준으로 집계)`;
+    box.appendChild(head);
+
+    const ul = document.createElement("ul");
+    ul.className = "list";
+    ul.style.marginTop = "10px";
+
+    for (const h of s.habits){
+      const it = stat[h.id];
+      const li = document.createElement("li");
+      li.className = "item";
+
+      const top = document.createElement("div");
+      top.className = "itemTop";
+
+      const left = document.createElement("div");
+      const nm = document.createElement("div");
+      nm.className = "name";
+      nm.textContent = it.name;
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      if (it.type === "count"){
+        meta.innerHTML = `누적 횟수: <b>${it.total}</b> · 목표달성 일수: <b>${it.successDays}</b>일`;
+      } else {
+        meta.innerHTML = `성공(완료) 일수: <b>${it.successDays}</b>일`;
+      }
+
+      left.appendChild(nm);
+      left.appendChild(meta);
+
+      top.appendChild(left);
+      li.appendChild(top);
+      ul.appendChild(li);
+    }
+
+    box.appendChild(ul);
+  }
+
+  function slugId(name){
+    return "h_" + name.trim().toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_가-힣]/g,"").slice(0,30) + "_" + Math.random().toString(16).slice(2,6);
+  }
+
+  // ---- 이벤트
+  const state = loadState();
+  ensureToday(state);
+
+  $("addBtn").onclick = () => {
+    const name = $("newName").value.trim();
+    if (!name) return alert("이름을 입력해 주세요.");
+    const type = $("newType").value;
+    const dailyTarget = Math.max(1, Number($("newTarget").value||1));
+
+    const h = { id: slugId(name), name, type, dailyTarget: type==="count" ? dailyTarget : 1 };
+    state.habits.unshift(h);
+    ensureToday(state);
+    saveState(state);
+    $("newName").value = "";
+    render(state);
+  };
+
+  $("newType").onchange = () => {
+    const isCount = $("newType").value === "count";
+    $("newTarget").disabled = !isCount;
+  };
+
+  $("rangeSel").onchange = () => render(state);
+
+  $("resetTodayBtn").onclick = () => {
+    if (!confirm("오늘 기록만 초기화할까요?")) return;
+    const d = todayISO();
+    state.log[d] ||= {};
+    for (const h of state.habits){
+      state.log[d][h.id] = (h.type === "count" ? {count:0} : {done:false});
+    }
+    saveState(state);
+    render(state);
+  };
+
+  $("exportBtn").onclick = async () => {
+    const data = JSON.stringify(state, null, 2);
+    try{
+      await navigator.clipboard.writeText(data);
+      alert("내보내기 완료! (클립보드에 복사됨)\n메모장/노션 등에 붙여넣어 보관할 수 있어요.");
+    }catch(e){
+      prompt("아래 내용을 복사해서 저장해 두세요:", data);
+    }
+  };
+
+  $("importBtn").onclick = () => {
+    const txt = prompt("가져오기: 이전에 내보낸 JSON 텍스트를 붙여넣어 주세요.");
+    if (!txt) return;
+    try{
+      const obj = JSON.parse(txt);
+      if (!obj.habits || !obj.log) throw new Error("형식 오류");
+      localStorage.setItem(LS_KEY, JSON.stringify(obj));
+      location.reload();
+    }catch(e){
+      alert("가져오기 실패: 형식이 올바르지 않아요.");
+    }
+  };
+
+  render(state);
+</script>
 </body>
 </html>
